@@ -18,34 +18,31 @@ import java.util.List;
 @Configuration
 public class SecurityConfig {
 
-    @Bean
-    public BCryptPasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
+    
+@Bean
+public CorsConfigurationSource corsConfigurationSource() {
+    CorsConfiguration config = new CorsConfiguration();
 
-    private final JwtAuthenticationFilter jwtFilter;
+    config.setAllowedOrigins(List.of(
+            "http://localhost:5173",
+            "https://estate-frontend-three.vercel.app"
+    ));
 
-    public SecurityConfig(JwtAuthenticationFilter jwtFilter) {
-        this.jwtFilter = jwtFilter;
-    }
+    config.setAllowedMethods(List.of(
+            "GET", "POST", "PUT", "DELETE", "OPTIONS"
+    ));
 
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration config = new CorsConfiguration();
+    config.setAllowedHeaders(List.of("*"));
+    config.setAllowCredentials(true);
 
-        config.setAllowedOrigins(List.of(
-                "http://localhost:5173",
-                "https://e-state-flow.vercel.app"
-        ));
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(List.of("*"));
-        config.setAllowCredentials(true);
+    UrlBasedCorsConfigurationSource source =
+            new UrlBasedCorsConfigurationSource();
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", config);
+    source.registerCorsConfiguration("/**", config);
 
-        return source;
-    }
+    return source;
+}
+
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
