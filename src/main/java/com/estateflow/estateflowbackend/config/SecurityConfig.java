@@ -18,66 +18,99 @@ import java.util.List;
 @Configuration
 public class SecurityConfig {
 
-    
-@Bean
-public CorsConfigurationSource corsConfigurationSource() {
-    CorsConfiguration config = new CorsConfiguration();
+    private final JwtAuthenticationFilter jwtFilter;
 
-    config.setAllowedOrigins(List.of(
-            "http://localhost:5173",
-            "https://estate-frontend-three.vercel.app"
-    ));
-
-    config.setAllowedMethods(List.of(
-            "GET", "POST", "PUT", "DELETE", "OPTIONS"
-    ));
-
-    config.setAllowedHeaders(List.of("*"));
-    config.setAllowCredentials(true);
-
-    UrlBasedCorsConfigurationSource source =
-            new UrlBasedCorsConfigurationSource();
-
-    source.registerCorsConfiguration("/**", config);
-
-    return source;
-}
-
+    public SecurityConfig(JwtAuthenticationFilter jwtFilter) {
+        this.jwtFilter = jwtFilter;
+    }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public BCryptPasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
 
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration config = new CorsConfiguration();
+
+        config.setAllowedOrigins(List.of(
+                "http://localhost:5173",
+                "https://estate-frontend-three.vercel.app"
+        ));
+
+        config.setAllowedMethods(List.of(
+                "GET",
+                "POST",
+                "PUT",
+                "DELETE",
+                "OPTIONS"
+        ));
+
+        config.setAllowedHeaders(List.of("*"));
+        config.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source =
+                new UrlBasedCorsConfigurationSource();
+
+        source.registerCorsConfiguration("/**", config);
+
+        return source;
+    }
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http)
+            throws Exception {
 
         http
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .cors(cors ->
+                        cors.configurationSource(
+                                corsConfigurationSource()
+                        )
+                )
                 .csrf(csrf -> csrf.disable())
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(
+                                SessionCreationPolicy.STATELESS
+                        )
+                )
                 .authorizeHttpRequests(auth -> auth
-                        // PUBLIC
+
+                        // PUBLIC ENDPOINTS
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/health").permitAll()
                         .requestMatchers("/uploads/**").permitAll()
 
-                        // PUBLIC READ
-                        .requestMatchers(HttpMethod.GET, "/api/properties/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/property-images/**").permitAll()
+                        // PUBLIC PROPERTY READ ACCESS
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/properties/**"
+                        ).permitAll()
 
-                        // OWNER ONLY
-                        .requestMatchers("/api/properties/**").hasRole("OWNER")
-                        .requestMatchers("/api/property-images/**").hasRole("OWNER")
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/property-images/**"
+                        ).permitAll()
 
-                        // AUTH REQUIRED
+                        // OWNER-ONLY PROPERTY MANAGEMENT
+                        .requestMatchers("/api/properties/**")
+                        .hasRole("OWNER")
+
+                        .requestMatchers("/api/property-images/**")
+                        .hasRole("OWNER")
+
+                        // AUTHENTICATED ENDPOINTS
                         .requestMatchers("/api/users/**").authenticated()
                         .requestMatchers("/api/messages/**").authenticated()
                         .requestMatchers("/api/favorites/**").authenticated()
 
-                        // EVERYTHING ELSE LOCKED
+                        // ALL OTHER REQUESTS
                         .anyRequest().authenticated()
                 )
-                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(
+                        jwtFilter,
+                        UsernamePasswordAuthenticationFilter.class
+                );
 
         return http.build();
     }
 }
-
-
